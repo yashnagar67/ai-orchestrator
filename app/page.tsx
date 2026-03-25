@@ -1,65 +1,140 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useCallback,useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string);
+import {
+  ReactFlow,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  Connection,
+  Edge,
+  Background,
+  Controls,
+  MiniMap,
+} from '@xyflow/react';
+
+import '@xyflow/react/dist/style.css';
+
+
+const initialNodes = [
+  { id: '1', position: { x: 250, y: 100 }, data: { label: '🤖 Research Agent' } }
+];
+const initialEdges: Edge[] = [];
+
+export default function WorkflowCanvas() {
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  const onConnect = useCallback(
+    (params: Connection | Edge) => setEdges((eds) => addEdge(params, eds)),
+    [setEdges],
+  );
+  const saveWorkflow=async()=>{
+    const currentworkflow={
+      title:"My first workflow",
+      nodes:nodes,
+      edges:edges,
+
+    };
+    const {data,error}=await supabase.from("workflows").insert([currentworkflow]);
+    if(error){
+      console.error("Error saving workflow:",error);
+    }else{
+      console.log("Saved Successfully",data);
+      alert("Workflow saved successfully!",);
+    }
+  }
+  const sendtobackend=async()=>{
+    const workflow={nodes,edges};
+    const response=await fetch("api/run",{
+      method:"POST",
+      body:JSON.stringify(workflow),
+      headers:{
+        "Content-Type":"application/json",
+      },
+    });
+    const data=await response.json();
+    console.log("Response from backend",data);
+
+  }
+  useEffect(()=>{
+    const fetchworkflow=async()=>{
+      const {data ,error}=await supabase.from('workflows').select("*").order('created_at', { ascending: false }).limit(1).single();
+      if(error){
+        console.log("Error fetching workflow:",error);
+      }else{
+        console.log("Fetched Successfully",data);
+        setNodes(data.nodes);
+        setEdges(data.edges);
+      }
+    }
+    fetchworkflow();
+  },[])
+
+  // NEW: Function to add a new agent dynamically
+  const addNewAgent = (agentType: string) => {
+    const newNode = {
+      id: Date.now().toString(), 
+      position: { x: Math.random() * 200 + 100, y: Math.random() * 200 + 100 }, 
+      data: { label: agentType },
+    };
+    setNodes((nds) => [...nds, newNode]);
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div style={{ width: '100vw', height: '100vh', display: 'flex' }}>
+      
+      {/* NEW: The Sidebar UI */}
+      <div className="w-64 bg-gray-50 p-4 border-r border-gray-200 flex flex-col gap-4 z-10 shadow-lg">
+        <h2 className="text-xl font-bold text-gray-800">Agent Library</h2>
+        <p className="text-sm text-gray-500 mb-4">Click to add to canvas</p>
+        
+        <button 
+          onClick={() => addNewAgent('🤖 Research Agent')}
+          className="bg-white p-3 border border-gray-200 rounded-md shadow-sm hover:bg-blue-50 hover:border-blue-300 transition-all text-left font-medium text-gray-700"
+        >
+          + Research Agent
+        </button>
+        
+        <button 
+          onClick={() => addNewAgent('✍️ Writer Agent')}
+          className="bg-white p-3 border border-gray-200 rounded-md shadow-sm hover:bg-green-50 hover:border-green-300 transition-all text-left font-medium text-gray-700"
+        >
+          + Writer Agent
+        </button>
+       <button 
+    onClick={saveWorkflow}
+    className="mt-auto bg-black text-white p-3 rounded-md shadow-md hover:bg-gray-800 active:bg-gray-700 active:scale-95 transition-all duration-150 font-bold"
+  >
+    💾 Save Workflow
+  </button>
+       <button 
+    onClick={sendtobackend}
+    className="mt-auto bg-green-500 text-white p-3 rounded-md shadow-md hover:bg-green-600 active:bg-green-700 active:scale-95 transition-all duration-150 font-bold"
+  >
+    ▶️ Run Pipline
+  </button>
+
+      </div>
+
+      {/* The Canvas Area */}
+      <div className="flex-1 h-full">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          fitView
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background />
+          <Controls />
+          <MiniMap />
+        </ReactFlow>
+      </div>
     </div>
   );
 }
