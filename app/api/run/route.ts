@@ -1,5 +1,12 @@
 import { NextResponse } from 'next/server';
 
+// const agentMap=(edges:any[])=>{
+  
+  
+// }
+
+    
+
 export async function POST(request: Request) {
   try {
     const {nodes,edges} = await request.json();
@@ -14,10 +21,18 @@ export async function POST(request: Request) {
     console.log(`🚀 Pipeline Triggered! Found ${startNodes.length} starting point(s).`);
     for(const node of startNodes){
       console.log(`Starting Agent: ${node.data.label}`);
+      const nextEdge=edges.filter((e:any)=>e.source==node.id)
+      console.log(edges);
+     for(const edge of nextEdge){
+     const nextNode=nodes.find((n:any)=>n.id==edge.target)
+     console.log(`Next Agent: ${nextNode.data.label}`);
+     }
+
       await new Promise((resolve)=>setTimeout(resolve,2000))
       console.log(`Agent ${node.data.label} Completed`);
 
     }
+
     console.log("-----------------------------------");
 
     return NextResponse.json({ success: true, message: "Pipeline run completed." });
