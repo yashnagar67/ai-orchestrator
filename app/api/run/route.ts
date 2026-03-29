@@ -1,6 +1,32 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
+import { Resend } from 'resend';
+// import { WelcomeEmail } from '@/components/emails/WelcomeEmail';
+const resend=new Resend(process.env.RESEND_API_KEY);
+
 const Ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+const getPrompt=(node:any,accumulatedContext:string) : string=>{
+  if(node.data.label=="🤖 Research Agent"){
+    return `You are acting as a Research Agent. 
+        Task Given by the user  ${node.data.prompt}
+       context from previous agents: "${accumulatedContext}".
+      If the context is empty,means you are first Agent node
+      Keep your response under 50 words.`;
+}else if(node.data.label=="Writer Agent"){
+  return `You are acting as a Writer Agent. 
+        Task Given by the user  ${node.data.prompt}
+       context from previous agents: "${accumulatedContext}".
+      
+      Keep your response under 50 words.`;
+  
+}else{
+  return `You are acting as a ${node.data.label}. 
+        Task Given by the user  ${node.data.prompt}
+       context from previous agents: "${accumulatedContext}".
+      
+      Keep your response under 50 words.`;
+}
+}
 
 
 
@@ -21,12 +47,13 @@ export async function POST(request: Request) {
     const finalResults = [];
     console.log("-----------------------------------");
     console.log(`🚀 Pipeline Triggered! Found ${startNodes.length} starting point(s).`);
+    let nextEdge=[];
     for (const node of startNodes) {
       currentNode = node;
       console.log(`Starting Agent: ${node.data.label}`);
 
 
-      const nextEdge = edges.filter((e: any) => e.source == node.id)
+       nextEdge = edges.filter((e: any) => e.source == node.id)
       console.log(edges);
 
       const prompt = `You are acting as a ${currentNode.data.label}. 
@@ -34,10 +61,16 @@ export async function POST(request: Request) {
        context from previous agents: "${accumulatedContext}".
       If the context is empty,means you are first Agent node
       Keep your response under 50 words.`;
+      const groundingtool={
+        googleSearch: {}
+      }
 
       const response = await Ai.models.generateContent({
         model: "gemini-2.5-flash",
-        contents: prompt,
+        contents: getPrompt(currentNode,accumulatedContext),
+        config:{
+          tools:[groundingtool]
+        }
       })
       const aiOutput = await response.text;
       accumulatedContext += `\n-${node.data.label}:\n${aiOutput}`;
@@ -45,23 +78,48 @@ export async function POST(request: Request) {
 
 
 
-      // for (const edge of nextEdge) {
-      //   const nextNode = nodes.find((n: any) => n.id == edge.target)
-      //   currentNode = nextNode
-      //   console.log("here is prompt")
-      //   const response = await Ai.models.generateContent({
-      //     model: "gemini-2.5-flash",
-      //     contents: prompt,
-      //   });
-      //   const aiOutput = await response.text;
+      for (const edge of nextEdge) {
+        const nextNode = nodes.find((n: any) => n.id == edge.target)
+        currentNode = nextNode
+        console.log("here is prompt")
+        const response = await Ai.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: getPrompt(currentNode,accumulatedContext),
+        });
+        const aiOutput = await response.text;
+         nextEdge=edges.filter((e: any) => e.source == currentNode.id)
 
-      // }
+      }
+      for(const edge of nextEdge){
+
+        currentNode=nodes.find((n: any) => n.id == edge.target)
+       
+        const {data, error}=await resend.emails.send({
+          from: 'onboarding@resend.dev',
+          to: 'nagary811@gmail.com',
+          subject: 'AI Orchestrator Workflow',
+          html:`<h1>${aiOutput}</h1>`
+
+
+        })
+        if(error){
+          console.log("Error sending email",error)
+        }
+        else{
+          console.log("Email sent successfully",data)
+        }
+        
+          
+        
+        console.log("This is our current node",currentNode.data.label)
+        
+      }
+      
       finalResults.push({
         nodeId: currentNode.id,
         label: currentNode.data.label,
         output: aiOutput,
       })
-
 
 
     }

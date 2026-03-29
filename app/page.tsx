@@ -140,6 +140,12 @@ export default function WorkflowCanvas() {
           + Writer Agent
         </button>
         <button
+          onClick={() => addNewAgent('📧 Email Agent','E.g. Write a short story about a robot....')}
+          className="bg-white p-3 border border-gray-200 rounded-md shadow-sm hover:bg-green-50 hover:border-green-300 transition-all text-left font-medium text-gray-700"
+        >
+          + Email Agent
+        </button>
+        <button
           onClick={saveWorkflow}
           className="mt-auto bg-black text-white p-3 rounded-md shadow-md hover:bg-gray-800 active:bg-gray-700 active:scale-95 transition-all duration-150 font-bold"
         >
