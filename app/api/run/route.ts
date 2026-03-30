@@ -28,6 +28,10 @@ const getPrompt=(node:any,accumulatedContext:string) : string=>{
 }
 }
 
+const SimplifyNode=(edge:any,node:any)=>{
+  console.log("THis are all edges",edge)
+
+}
 
 
 
@@ -48,6 +52,7 @@ export async function POST(request: Request) {
     console.log("-----------------------------------");
     console.log(`🚀 Pipeline Triggered! Found ${startNodes.length} starting point(s).`);
     let nextEdge=[];
+    SimplifyNode(edges,nodes)
     for (const node of startNodes) {
       currentNode = node;
       console.log(`Starting Agent: ${node.data.label}`);
@@ -65,28 +70,34 @@ export async function POST(request: Request) {
         googleSearch: {}
       }
 
-      const response = await Ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: getPrompt(currentNode,accumulatedContext),
-        config:{
-          tools:[groundingtool]
-        }
-      })
-      const aiOutput = await response.text;
+      // const response = await Ai.models.generateContent({
+      //   model: "gemini-2.5-flash",
+      //   contents: getPrompt(currentNode,accumulatedContext),
+      //   config:{
+      //     tools:[groundingtool]
+      //   }
+      // })
+      // const aiOutput = await response.text;
+      
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const aiOutput = `[Garbage Data] Simulated response for ${currentNode.data.label}`;
       accumulatedContext += `\n-${node.data.label}:\n${aiOutput}`;
 
-
+// ok now , uncomment the ai call, now i wanna see how it working
 
 
       for (const edge of nextEdge) {
         const nextNode = nodes.find((n: any) => n.id == edge.target)
         currentNode = nextNode
         console.log("here is prompt")
-        const response = await Ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: getPrompt(currentNode,accumulatedContext),
-        });
-        const aiOutput = await response.text;
+        // const response = await Ai.models.generateContent({
+        //   model: "gemini-2.5-flash",
+        //   contents: getPrompt(currentNode,accumulatedContext),
+        // });
+        // const aiOutput = await response.text;
+
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const aiOutput = `[Garbage Data] Simulated response for ${currentNode.data.label}`;
          nextEdge=edges.filter((e: any) => e.source == currentNode.id)
 
       }
@@ -94,24 +105,24 @@ export async function POST(request: Request) {
 
         currentNode=nodes.find((n: any) => n.id == edge.target)
        
-        const {data, error}=await resend.emails.send({
-          from: 'onboarding@resend.dev',
-          to: 'nagary811@gmail.com',
-          subject: 'AI Orchestrator Workflow',
-          html:`<h1>${aiOutput}</h1>`
+      //   const {data, error}=await resend.emails.send({
+      //     from: 'onboarding@resend.dev',
+      //     to: 'nagary811@gmail.com',
+      //     subject: 'AI Orchestrator Workflow',
+      //     html:`<h1>${aiOutput}</h1>`
 
 
-        })
-        if(error){
-          console.log("Error sending email",error)
-        }
-        else{
-          console.log("Email sent successfully",data)
-        }
+      //   })
+      //   if(error){
+      //     console.log("Error sending email",error)
+      //   }
+      //   else{
+      //     console.log("Email sent successfully",data)
+      //   }
         
           
         
-        console.log("This is our current node",currentNode.data.label)
+      //   console.log("This is our current node",currentNode.data.label)
         
       }
       
