@@ -28,11 +28,63 @@ const getPrompt=(node:any,accumulatedContext:string) : string=>{
 }
 }
 
-const SimplifyNode=(edge:any,node:any)=>{
-  console.log("THis are all edges",edge)
+const execution_plan=(node:any, edges:any)=>{
+  const executionPlan=[]
+  const liner=[]
+// for(const n of node){
+  
+//   // console.log("dependencies of ",n.data.label,n.dependencies)
+// }
+node.forEach((n:any)=>{
+  n.count=(edges.filter((e:any)=>e.target==n.id).map((e:any)=>e.source)).length
+  console.log("this is count",n.count)
+})
 
+for(let i=0;i<3;i++){
+  const staterNode=node.filter((n:any)=>n.count==0)
+  executionPlan.push(staterNode.map((n:any)=>n.id))
+  node=node.filter((n:any)=>!staterNode.includes(n.id))
+  console.log("this is node list after removing stater node",node)
+  for(const s of staterNode){
+    const pointer=edges.filter((e:any)=>e.source==s.id).map((e:any)=>e.target).map((e:any)=>node.find((n:any)=>n.id==e))
+    if(pointer.length>0){
+      pointer.forEach((p:any)=>{
+       p.count-=1
+      })
+    }
+    
+  }
+  
+  
+
+  
 }
+  
 
+// for(let i=0;i<3;i++){
+// const staterNode=node.filter((n:any)=>n.count==0)
+// node= node.filter((n:any)=>!staterNode.includes(n.id))
+// console.log('THis is starter Node',staterNode)
+// executionPlan.push(staterNode)
+// for(const s of staterNode){
+//   const pointer= edges.filter((e:any)=>e.source==s.id).map((e:any)=>e.target)
+//   if(pointer.length>0){
+//     pointer.forEach((p:any)=>{
+//       p.count=p.count-1;
+      
+      
+//     })
+    
+//   }
+  
+// }
+// }
+
+console.log("this is execution Plan",executionPlan)
+
+
+  
+}
 
 
 
@@ -52,14 +104,15 @@ export async function POST(request: Request) {
     console.log("-----------------------------------");
     console.log(`🚀 Pipeline Triggered! Found ${startNodes.length} starting point(s).`);
     let nextEdge=[];
-    SimplifyNode(edges,nodes)
+     execution_plan(nodes,edges)
     for (const node of startNodes) {
       currentNode = node;
       console.log(`Starting Agent: ${node.data.label}`);
 
 
        nextEdge = edges.filter((e: any) => e.source == node.id)
-      console.log(edges);
+      // console.log(edges);
+
 
       const prompt = `You are acting as a ${currentNode.data.label}. 
         your prompt is ${currentNode.data.prompt}
