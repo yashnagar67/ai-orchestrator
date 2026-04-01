@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { Resend } from 'resend';
+import { start } from 'repl';
 // import { WelcomeEmail } from '@/components/emails/WelcomeEmail';
 const resend=new Resend(process.env.RESEND_API_KEY);
 
@@ -29,7 +30,7 @@ const getPrompt=(node:any,accumulatedContext:string) : string=>{
 }
 
 const execution_plan=(node:any, edges:any)=>{
-  const executionPlan=[]
+  const executionPlan:any=[]
   const liner=[]
 // for(const n of node){
   
@@ -37,14 +38,22 @@ const execution_plan=(node:any, edges:any)=>{
 // }
 node.forEach((n:any)=>{
   n.count=(edges.filter((e:any)=>e.target==n.id).map((e:any)=>e.source)).length
-  console.log("this is count",n.count)
+  // console.log("this is count",n.count)
 })
 
-for(let i=0;i<3;i++){
-  const staterNode=node.filter((n:any)=>n.count==0)
+
+
+
+while(executionPlan.flat().length<node.length){
+  const staterNode=node.filter((n:any)=>n.count==0).filter((n:any)=>!executionPlan.flat().includes(n.id))
+  // console.log("lwngth of stater node",staterNode.length)
+  
+  
   executionPlan.push(staterNode.map((n:any)=>n.id))
-  node=node.filter((n:any)=>!staterNode.includes(n.id))
-  console.log("this is node list after removing stater node",node)
+  
+ 
+  
+
   for(const s of staterNode){
     const pointer=edges.filter((e:any)=>e.source==s.id).map((e:any)=>e.target).map((e:any)=>node.find((n:any)=>n.id==e))
     if(pointer.length>0){
@@ -55,32 +64,12 @@ for(let i=0;i<3;i++){
     
   }
   
+  }
   
 
-  
-}
-  
 
-// for(let i=0;i<3;i++){
-// const staterNode=node.filter((n:any)=>n.count==0)
-// node= node.filter((n:any)=>!staterNode.includes(n.id))
-// console.log('THis is starter Node',staterNode)
-// executionPlan.push(staterNode)
-// for(const s of staterNode){
-//   const pointer= edges.filter((e:any)=>e.source==s.id).map((e:any)=>e.target)
-//   if(pointer.length>0){
-//     pointer.forEach((p:any)=>{
-//       p.count=p.count-1;
-      
-      
-//     })
-    
-//   }
-  
-// }
-// }
 
-console.log("this is execution Plan",executionPlan)
+  return executionPlan
 
 
   
@@ -94,6 +83,7 @@ export async function POST(request: Request) {
 
     const targetIds = new Set(edges.map((edge: any) => edge.target));
     const startNodes = nodes.filter((node: any) => !targetIds.has(node.id))
+    const executionPlan:any=execution_plan(nodes,edges)
     if (startNodes.length == 0) {
       console.log("No starting Node Found did your create infinte loop?")
       return NextResponse.json({ error: "No starting Node Found did your create infinte loop?" }, { status: 400 })
@@ -104,7 +94,7 @@ export async function POST(request: Request) {
     console.log("-----------------------------------");
     console.log(`🚀 Pipeline Triggered! Found ${startNodes.length} starting point(s).`);
     let nextEdge=[];
-     execution_plan(nodes,edges)
+     
     for (const node of startNodes) {
       currentNode = node;
       console.log(`Starting Agent: ${node.data.label}`);
