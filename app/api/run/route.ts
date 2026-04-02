@@ -74,12 +74,21 @@ while(executionPlan.flat().length<node.length){
 
   
 }
+const Executing_Workflow=async(nodes:any,edges:any,stateStore:Record<string,string>)=>{
+
+  
+}
+  
+
 
 
 
 export async function POST(request: Request) {
   try {
     const { nodes, edges } = await request.json();
+    const stateStore:Record<string,string>={};
+    const dd=[]
+    
 
     const targetIds = new Set(edges.map((edge: any) => edge.target));
     const startNodes = nodes.filter((node: any) => !targetIds.has(node.id))
