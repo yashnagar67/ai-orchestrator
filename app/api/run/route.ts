@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { Resend } from 'resend';
 import { start } from 'repl';
+import { promises } from 'dns';
 // import { WelcomeEmail } from '@/components/emails/WelcomeEmail';
 const resend=new Resend(process.env.RESEND_API_KEY);
 
@@ -74,7 +75,34 @@ while(executionPlan.flat().length<node.length){
 
   
 }
-const Executing_Workflow=async(nodes:any,edges:any,stateStore:Record<string,string>)=>{
+const sleep=(ms:number)=> new Promise((resolve)=>setTimeout(resolve,ms))
+const Executing_Workflow=async(nodes:any,edges:any,stateStore:Record<string,string>,executionPlan:any)=>{
+  for(const batch of executionPlan){
+    const batchTask=batch.map((nodeId:any)=>nodes.find((n:any)=>n.id==nodeId)).map(async (node:any)=>{
+        const context=edges.filter((e:any)=>e.target==node.id).map((e:any)=>stateStore[e.source]||"").join("\n")
+        if(node.data.label=='📧 Email Agent'){
+          return
+          
+        }
+        const prompt=getPrompt(node,context)
+
+        const response=await Ai.models.generateContent({
+          model:"gemini-2.5-flash",
+          contents:prompt,
+          config:{
+            tools:[{googleSearch:{}}]
+          }
+        })
+        const aiOutput:string=await response.text ?? " "
+        stateStore[node.id]=aiOutput
+    })
+  
+    await Promise.all(batchTask)
+    console.log("this is state store",stateStore);
+     console.log("Batch finished, resting for 3 seconds to avoid rate limits...");
+     await sleep(3000);
+    
+  }
 
   
 }
@@ -93,6 +121,7 @@ export async function POST(request: Request) {
     const targetIds = new Set(edges.map((edge: any) => edge.target));
     const startNodes = nodes.filter((node: any) => !targetIds.has(node.id))
     const executionPlan:any=execution_plan(nodes,edges)
+    Executing_Workflow(nodes,edges,stateStore,executionPlan)
     if (startNodes.length == 0) {
       console.log("No starting Node Found did your create infinte loop?")
       return NextResponse.json({ error: "No starting Node Found did your create infinte loop?" }, { status: 400 })
