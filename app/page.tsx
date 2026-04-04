@@ -44,7 +44,7 @@ export default function WorkflowCanvas() {
     setSelectedNodeId(null);
   }, []);
 
-  const updateNodePrompt = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const updateNodePrompt = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     const newPrompt = e.target.value;
     setNodes((nds) =>
       nds.map((node) => {
@@ -70,6 +70,29 @@ export default function WorkflowCanvas() {
       alert("Workflow saved successfully!",);
     }
   }
+
+ const aiprompt=async(nodemon:any)=>{
+  try{
+    console.log("Ai button is clicked")
+  const response=await fetch('/api/aiprompt',{
+    method:"POST",
+    body:JSON.stringify({prompt:nodemon.data.prompt,label:nodemon.data.label}),
+    headers:{
+      "Content-Type":"application/json",
+    },
+  })
+
+   const data=await response.json();
+   console.log("Response from backend", data.aiprompt);
+   if(data.success){
+    setNodes((nds)=>nds.map((n)=>n.id===nodemon.id?{...n,data:{...n.data,prompt:data.aiprompt||n.data.prompt}}:{...n}))
+      
+   }
+}catch(error){
+  console.error("Error running workflow:", error);
+}
+ }
+
   const sendtobackend = async () => {
     const workflow = { nodes, edges };
     setLoading(true);
@@ -223,17 +246,41 @@ export default function WorkflowCanvas() {
                   <span className="font-semibold text-blue-800 text-xs uppercase tracking-wider block mb-1">Agent Type</span>
                   <span className="text-sm font-medium text-blue-900">{selectedNode.data.label as React.ReactNode}</span>
                 </div>
-                
-                <div className="flex flex-col gap-2 flex-1">
-                  <label className="font-semibold text-gray-700 text-sm">Task Prompt</label>
-                  <textarea 
-                    className="w-full flex-1 min-h-[200px] text-sm p-4 border border-gray-300 rounded-lg shadow-inner focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none text-black transition-all"
-                    placeholder={selectedNode.data.example as string || 'Enter your prompt here'}
-                    value={selectedNode.data.prompt as string || ''}
-                    onChange={updateNodePrompt}
-                  />
-                  <p className="text-xs text-gray-500 leading-relaxed">This prompt is attached to the agent and will be sent to the backend during execution.</p>
-                </div>
+                {selectedNode.data.label === "📧 Email Agent" ? (
+                  <div className="flex flex-col gap-2 flex-1">
+                    <label className="font-semibold text-gray-700 text-sm">Recipient Email</label>
+                    <input 
+                      type="email"
+                      className="w-full text-sm p-4 border border-gray-300 rounded-lg shadow-inner focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-black transition-all"
+                      placeholder="e.g., user@example.com"
+                      value={selectedNode.data.prompt as string || ''}
+                      onChange={updateNodePrompt}
+                    />
+                    <p className="text-xs text-gray-500 leading-relaxed">This email address will receive the final output from the pipeline.</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2 flex-1">
+                    <label className="font-semibold text-gray-700 text-sm">Task Prompt</label>
+                    <div className="relative flex-1 flex">
+                      <textarea 
+                        className="w-full h-full min-h-[200px] text-sm p-4 pb-12 border border-gray-300 rounded-lg shadow-inner focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none text-black transition-all"
+                        placeholder={selectedNode.data.example as string || 'Enter your prompt here'}
+                        value={selectedNode.data.prompt as string || ''}
+                        onChange={updateNodePrompt}
+                      />
+                      <button 
+                        className="absolute bottom-3 right-3 p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full shadow-md text-white hover:opacity-90 transition-opacity flex items-center justify-center cursor-pointer pointer-events-auto"
+                        title="Improve prompt with AI"
+                        onClick={()=>aiprompt(selectedNode)}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M16.19 2H7.81C4.17 2 2 4.17 2 7.81V16.18C2 19.83 4.17 22 7.81 22H16.18C19.82 22 21.99 19.83 21.99 16.19V7.81C22 4.17 19.83 2 16.19 2ZM15.36 11.83C15.93 11.96 16.51 12.06 17.07 12.18C17.65 12.31 17.66 12.83 17.08 12.96C15.82 13.25 14.56 13.34 13.31 13.78C12.39 14.1 11.99 14.49 11.66 15.42C11.19 16.73 11.08 18.06 10.76 19.39C10.63 19.98 10.11 20 9.98 19.41C9.65 17.86 9.49 16.3 8.87 14.86C8.36 13.68 7.57 12.92 6.3 12.55C5.16 12.21 4.02 11.93 2.87 11.61C2.33 11.45 2.33 10.95 2.85 10.82C4.1 10.51 5.37 10.42 6.63 9.94C7.57 9.58 8 9.17 8.35 8.21C8.83 6.89 8.95 5.54 9.28 4.2C9.42 3.59 9.92 3.6 10.05 4.21C10.39 5.75 10.56 7.31 11.18 8.75C11.69 9.94 12.48 10.69 13.75 11.07C14.28 11.23 14.82 11.39 15.36 11.55V11.83Z" fill="currentColor"/>
+                        </svg>
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 leading-relaxed">This prompt is attached to the agent and will be sent to the backend during execution.</p>
+                  </div>
+                )}
               </>
             );
           })()}

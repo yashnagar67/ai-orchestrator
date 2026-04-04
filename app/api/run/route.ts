@@ -14,14 +14,21 @@ const getPrompt=(node:any,accumulatedContext:string) : string=>{
        context from previous agents: "${accumulatedContext}".
       If the context is empty,means you are first Agent node
       Keep your response under 50 words.`;
-}else if(node.data.label=="Writer Agent"){
+}else if(node.data.label=="✍️ Writer Agent"){
   return `You are acting as a Writer Agent. 
         Task Given by the user  ${node.data.prompt}
        context from previous agents: "${accumulatedContext}".
       
       Keep your response under 50 words.`;
   
-}else{
+}else if(node.data.label=="📧 Email Agent"){
+  return`Act as an expert Email writer of google that write clean and clear emails for the user.
+  here is the context for email ${accumulatedContext}.
+  Your goal:You must need to return a strictly typed JSON object, with the following keys:  {"subject": "...", "body": "..."}
+  Note: use html tags for formating the email body.
+  `
+}
+else{
   return `You are acting as a ${node.data.label}. 
         Task Given by the user  ${node.data.prompt}
        context from previous agents: "${accumulatedContext}".
@@ -75,15 +82,30 @@ while(executionPlan.flat().length<node.length){
 
   
 }
+const Email_Agent=async (subject:string , body:string , email:string)=>{
+  const {data, error}=await resend.emails.send({
+          from: 'onboarding@resend.dev',
+          to: email,
+          subject: subject,
+          html:body
+
+
+        })
+        if(error){
+          console.log("Error sending email",error)
+        }
+        else{
+          console.log("Email sent successfully",data)
+        }
+        
+
+}
 const sleep=(ms:number)=> new Promise((resolve)=>setTimeout(resolve,ms))
 const Executing_Workflow=async(nodes:any,edges:any,stateStore:Record<string,string>,executionPlan:any)=>{
   for(const batch of executionPlan){
     const batchTask=batch.map((nodeId:any)=>nodes.find((n:any)=>n.id==nodeId)).map(async (node:any)=>{
         const context=edges.filter((e:any)=>e.target==node.id).map((e:any)=>stateStore[e.source]||"").join("\n")
-        if(node.data.label=='📧 Email Agent'){
-          return
-          
-        }
+        
         const prompt=getPrompt(node,context)
 
         const response=await Ai.models.generateContent({
@@ -94,11 +116,17 @@ const Executing_Workflow=async(nodes:any,edges:any,stateStore:Record<string,stri
           }
         })
         const aiOutput:string=await response.text ?? " "
+        console.log("this is ai output",aiOutput)
+
+        if(node.data.label=='📧 Email Agent'){
+          const {subject,body}=JSON.parse(aiOutput)
+          Email_Agent(subject,body,node.data.prompt)
+        }
         stateStore[node.id]=aiOutput
     })
   
     await Promise.all(batchTask)
-    console.log("this is state store",stateStore);
+    // console.log("this is state store",stateStore);
      console.log("Batch finished, resting for 3 seconds to avoid rate limits...");
      await sleep(3000);
     
