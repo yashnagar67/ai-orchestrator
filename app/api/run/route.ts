@@ -100,6 +100,25 @@ const Email_Agent=async (subject:string , body:string , email:string)=>{
         
 
 }
+const webhook_Agent=async(url:string,payload:JSON)=>{
+  try{
+    const response=await fetch(url,{
+      method:"POST",
+      body:JSON.stringify(payload),
+      headers:{
+        "content-type":"application/json"
+        
+      }
+    })
+    if(!response.ok){
+      throw new Error(`Webhook failed with status ${response.status}`)
+    }
+    return await response.json()
+  }catch(error){
+    console.log("Error sending webhook",error)
+    return {error:"Webhook failed"}
+  }
+}
 const sleep=(ms:number)=> new Promise((resolve)=>setTimeout(resolve,ms))
 const Executing_Workflow=async(nodes:any,edges:any,stateStore:Record<string,string>,executionPlan:any)=>{
   for(const batch of executionPlan){
@@ -107,6 +126,10 @@ const Executing_Workflow=async(nodes:any,edges:any,stateStore:Record<string,stri
         const context=edges.filter((e:any)=>e.target==node.id).map((e:any)=>stateStore[e.source]||"").join("\n")
         
         const prompt=getPrompt(node,context)
+        if(node.data.label=="🔗 Webhook Agent"){
+
+          
+        }
 
         const response=await Ai.models.generateContent({
           model:"gemini-2.5-flash",
@@ -119,7 +142,7 @@ const Executing_Workflow=async(nodes:any,edges:any,stateStore:Record<string,stri
         console.log("this is ai output",aiOutput)
 
         if(node.data.label=='📧 Email Agent'){
-          const {subject,body}=JSON.parse(aiOutput)
+          const {subject,body}=JSON.parse(aiOutput.replace(/```json|```/g, "").trim())
           Email_Agent(subject,body,node.data.prompt)
         }
         stateStore[node.id]=aiOutput

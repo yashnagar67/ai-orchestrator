@@ -169,6 +169,12 @@ export default function WorkflowCanvas() {
           + Email Agent
         </button>
         <button
+          onClick={() => addNewAgent('🔗 Webhook Agent','E.g. https://api.mywebhook.com/endpoint')}
+          className="bg-white p-3 border border-gray-200 rounded-md shadow-sm hover:bg-yellow-50 hover:border-yellow-300 transition-all text-left font-medium text-gray-700"
+        >
+          + Webhook Agent
+        </button>
+        <button
           onClick={saveWorkflow}
           className="mt-auto bg-black text-white p-3 rounded-md shadow-md hover:bg-gray-800 active:bg-gray-700 active:scale-95 transition-all duration-150 font-bold"
         >
@@ -257,6 +263,18 @@ export default function WorkflowCanvas() {
                       onChange={updateNodePrompt}
                     />
                     <p className="text-xs text-gray-500 leading-relaxed">This email address will receive the final output from the pipeline.</p>
+                  </div>
+                ) : selectedNode.data.label === "🔗 Webhook Agent" ? (
+                  <div className="flex flex-col gap-2 flex-1">
+                    <label className="font-semibold text-gray-700 text-sm">Target URL</label>
+                    <input 
+                      type="url"
+                      className="w-full text-sm p-4 border border-gray-300 rounded-lg shadow-inner focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-black transition-all"
+                      placeholder="e.g., https://my-webhook.com/api"
+                      value={selectedNode.data.prompt as string || ''}
+                      onChange={updateNodePrompt}
+                    />
+                    <p className="text-xs text-gray-500 leading-relaxed">This URL will be called with the pipeline result data payload.</p>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2 flex-1">
